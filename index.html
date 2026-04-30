@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prodigy Beast Sequencer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+        
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Roboto Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            box-sizing: border-box;
+            background-image: radial-gradient(circle, #333 1px, transparent 1px);
+            background-size: 15px 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            background-color: #222;
+            border: 2px solid #00ff80;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 128, 0.3);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+        }
+
+        h1 {
+            color: #00ff80;
+            text-align: center;
+            font-size: 3rem;
+            text-shadow: 0 0 10px #00ff80;
+            margin-bottom: 10px;
+        }
+
+        /* --- AI DJ OVERLAY --- */
+        #aiDjOverlay {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #f1c40f;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        #aiDjOverlay.takeover {
+            border-color: #e74c3c;
+            box-shadow: 0 0 40px rgba(231, 76, 60, 0.8);
+        }
+
+        #aiDjTitle {
+            color: #f1c40f;
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+        }
+
+        .takeover #aiDjTitle {
+            color: #e74c3c;
+        }
+
+        #aiTrackInfo {
+            font-size: 1.2rem;
+            color: #00ff80;
+            margin-bottom: 5px;
+        }
+
+        #aiActionInfo {
+            font-size: 1rem;
+            color: #e0e0e0;
+            font-style: italic;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #444;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .controls button, .controls select {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .controls .transport button {
+            background-color: #00ff80;
+            color: #1a1a1a;
+        }
+
+        .controls .transport button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 255, 128, 0.4);
+        }
+
+        .controls .transport button.playing {
+            background-color: #e74c3c;
+            box-shadow: 0 0 15px #e74c3c;
+        }
+        
+        .controls .transport button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .tempo-control, .length-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #00ff80;
+            font-size: 1.2rem;
+        }
+
+        .length-control select {
+            background-color: #444;
+            color: #e0e0e0;
+            border: 1px solid #00ff80;
+        }
+
+        .sliders {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            background-color: #333;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: #00ff80;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+            transition: opacity .2s;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ff80;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ff80;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .grid-container {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 10px;
+            background-color: #333;
+        }
+
+        .sequencer-grid {
+            display: grid;
+            min-width: 100%;
+        }
+        
+        #stepNumbers {
+            display: grid;
+            gap: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #444;
+        }
+
+        #stepNumbers > div {
+            text-align: center;
+            color: #888;
+        }
+
+        .track-row {
+            display: grid;
+            gap: 5px;
+            padding: 5px 0;
+            align-items: center;
+        }
+
+        .track-label {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .step-button {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #444;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .step-button.active {
+            background-color: var(--track-color);
+            box-shadow: 0 0 10px var(--track-color);
+        }
+
+        .step-button.playing {
+            border: 2px solid #00ff80;
+            box-shadow: 0 0 10px rgba(0,255,128,0.7), inset 0 0 5px rgba(255,255,255,0.5);
+            animation: pulse-border 0.5s infinite alternate;
+        }
+
+        .step-button.active.playing {
+            background-color: #e0e0e0;
+            box-shadow: 0 0 15px var(--track-color), 0 0 25px var(--track-color);
+        }
+
+        .step-button.beat-1 {
+            border-left: 2px solid #aaa;
+        }
+
+        .step-button.beat-1.playing {
+            border-left: 2px solid #e0e0e0;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+        }
+
+        .volume-slider {
+            -webkit-appearance: slider-vertical;
+            writing-mode: bt-lr;
+            width: 12px;
+            height: 60px;
+        }
+
+        .preset-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background-color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #444;
+        }
+
+        .category-tabs {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .category-tab {
+            padding: 8px 15px;
+            background-color: #444;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .category-tab:hover {
+            background-color: #555;
+        }
+
+        .category-tab.active {
+            background-color: #00ff80;
+            color: #1a1a1a;
+            border-color: #00ff80;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            width: 100%;
+        }
+
+        .preset-btn {
+            background-color: #444;
+            color: #e0e0e0;
+            border: 1px solid #00ff80;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 255, 128, 0.2);
+        }
+
+        .ai-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .ai-controls button, .upload-container label {
+            background-color: #9b59b6;
+            color: #1a1a1a;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+
+        .ai-controls button:hover, .upload-container label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(155, 89, 182, 0.4);
+        }
+
+        .upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px dashed #00ff80;
+            margin-bottom: 10px;
+        }
+
+        .upload-container input[type="file"] {
+            display: none;
+        }
+        
+        .ai-controls .gemini-btn {
+            background: linear-gradient(45deg, #f1c40f, #e67e22);
+            color: #1a1a1a;
+            box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+        }
+
+        #aiFestivalBtn {
+            background: linear-gradient(45deg, #00ff80, #0080ff);
+            color: #1a1a1a;
+            font-size: 1.2rem;
+            width: 100%;
+            padding: 15px;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 128, 0.6);
+            animation: pulse-festival 2s infinite alternate;
+        }
+
+        #aiFestivalBtn.recording {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            animation: pulse-danger 1s infinite alternate;
+            color: white;
+            box-shadow: 0 0 30px #e74c3c;
+        }
+
+        @keyframes pulse-festival {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 128, 0.4); }
+            100% { box-shadow: 0 0 25px rgba(0, 255, 128, 1); }
+        }
+
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 5px rgba(231, 76, 60, 0.4); transform: scale(1); }
+            100% { box-shadow: 0 0 25px rgba(231, 76, 60, 1); transform: scale(1.02); }
+        }
+
+        #aiStatus {
+            text-align: center;
+            font-size: 1.2rem;
+            height: 25px;
+            margin-top: 10px;
+            transition: opacity 1s;
+        }
+
+        .voice-export-controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background-color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #444;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .voice-controls, .export-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .voice-controls button, .export-controls button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        #recordVoiceBtn {
+            background-color: #e74c3c;
+            color: #1a1a1a;
+        }
+
+        #exportMp3Btn {
+            background-color: #f39c12;
+            color: #1a1a1a;
+        }
+
+        #exportStatus {
+            height: 20px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .info-bar {
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* --- MODAL STYLES --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #222;
+            border: 2px solid #9b59b6;
+            border-radius: 10px;
+            padding: 25px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(155, 89, 182, 0.6);
+        }
+        .modal-content h3 {
+            color: #00ff80;
+            margin-top: 0;
+            font-size: 1.5rem;
+        }
+        .modal-content p {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #e0e0e0;
+        }
+        .modal-content input[type="text"] {
+            width: 90%;
+            padding: 12px;
+            margin: 15px 0;
+            background: #333;
+            border: 1px solid #00ff80;
+            color: #fff;
+            border-radius: 5px;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background-color: #9b59b6;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.2s;
+        }
+        .modal-content button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(155, 89, 182, 0.5);
+        }
+        .modal-content button.close-btn {
+            background-color: #e74c3c;
+        }
+        .modal-content button.close-btn:hover {
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .controls, .sliders, .voice-export-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .volume-control {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PRODIGY BEAST SEQUENCER</h1>
+        <div class="info-bar">
+            A tribute to the iconic sounds of The Prodigy. Create your own breakbeats!
+        </div>
+
+        <!-- AI DJ Overlay (Hidden by default) -->
+        <div id="aiDjOverlay">
+            <h2 id="aiDjTitle">🎧 AI DJ IN CONTROL 🎧</h2>
+            <div id="aiTrackInfo">Preparing Setlist...</div>
+            <div id="aiActionInfo">Analyzing Tracks...</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 10px;">(Touch any control to take over)</div>
+        </div>
+
+        <div class="controls">
+            <div class="transport">
+                <button id="playBtn">▶ PLAY</button>
+                <button id="stopBtn">⏹ STOP</button>
+                <button id="clearBtn">🗑 CLEAR</button>
+            </div>
+            <div class="tempo-control">
+                <label for="tempoSlider">TEMPO: <span id="tempoDisplay">140</span> BPM</label>
+                <input type="range" id="tempoSlider" min="60" max="200" value="140">
+            </div>
+            <div class="length-control">
+                <label for="sequenceLengthSelect">LENGTH:</label>
+                <select id="sequenceLengthSelect">
+                    <option value="8">8 STEPS</option>
+                    <option value="16" selected>16 STEPS</option>
+                    <option value="32">32 STEPS</option>
+                    <option value="64">64 STEPS</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="info-bar" id="sequenceInfo"></div>
+
+        <div class="sliders">
+            <div class="slider-group">
+                <span>MASTER VOLUME</span>
+                <input type="range" id="masterVolume" min="0" max="100" value="80">
+            </div>
+            <div class="slider-group">
+                <span>FILTER FREQ</span>
+                <input type="range" id="filterFreq" min="100" max="20000" value="20000">
+            </div>
+            <div class="slider-group">
+                <span>DISTORTION</span>
+                <input type="range" id="distortion" min="0" max="100" value="0">
+            </div>
+            <div class="slider-group">
+                <span>REVERB MIX</span>
+                <input type="range" id="reverb" min="0" max="100" value="50">
+            </div>
+            <div class="slider-group">
+                <span>DELAY MIX</span>
+                <input type="range" id="delay" min="0" max="100" value="0">
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="sequencer-grid">
+                <div id="stepNumbers"></div>
+                <div id="tracks"></div>
+            </div>
+        </div>
+        
+        <div class="preset-controls">
+            <h2>BEAST PRESETS</h2>
+            <div class="category-tabs" id="categoryTabs"></div>
+            <div class="preset-grid" id="presetGrid"></div>
+        </div>
+        
+        <div class="upload-container">
+            <h2 style="margin:0; color:#00ff80;">🎧 DJ DECKS (UPLOAD TRACKS) 🎧</h2>
+            <div class="info-bar">Upload your MP3s to let the AI mix them with sequencer FX!</div>
+            <label for="djAudioUpload">📂 CHOOSE AUDIO FILES</label>
+            <input type="file" id="djAudioUpload" multiple accept="audio/*">
+            <div id="uploadStatus" style="color: #00ff80; font-weight: bold;">0 Tracks Loaded</div>
+        </div>
+
+        <div class="ai-controls">
+            <button id="geminiPromptBeat" class="gemini-btn">✨ TEXT-TO-BEAT</button>
+            <button id="geminiMixEngineer" class="gemini-btn">✨ AI MIX ENGINEER</button>
+            <button id="geminiRoastBeat" class="gemini-btn">✨ ROAST MY BEAT</button>
+            <button id="aiFestivalBtn">🎧 START AI DJ FESTIVAL SET & RECORD 🎧</button>
+        </div>
+        <div id="aiStatus"></div>
+
+        <div class="voice-export-controls">
+            <div class="export-controls">
+                <h2>MANUAL EXPORT</h2>
+                <button id="exportMp3Btn">🎵 RECORD/EXPORT AS WEBM</button>
+                <div id="exportStatus"></div>
+            </div>
+        </div>
+
+        <!-- Custom Modal for LLM Interactions -->
+        <div id="geminiModal" class="modal">
+            <div class="modal-content">
+                <h3 id="modalTitle">✨ GEMINI AI ✨</h3>
+                <p id="modalText"></p>
+                <input type="text" id="modalInput" style="display: none;" placeholder="E n t e r   y o u r   v i b e . . .">
+                <div id="modalButtons">
+                    <button id="modalSubmitBtn" style="display: none;">SUBMIT PROMPT</button>
+                    <button id="modalCloseBtn" class="close-btn">CLOSE</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script>
+        // --- CORE AUDIO & SEQUENCER STATE ---
+        let audioContext;
+        let masterGain, filterNode, distortionNode, reverbNode, delayNode;
+        let reverbGain, delayGain, feedbackGain;
+        
+        let isPlaying = false;
+        let currentStep = 0;
+        let nextStepTime = 0;
+        let lookAhead = 25;
+        let scheduleAheadTime = 0.1;
+        let tempo = 140;
+        let sequenceLength = 16;
+
+        let exportRecorder = null;
+        let exportDestination = null;
+        let recordedChunks = [];
+
+        // --- DJ SET STATE & MUTUAL EXCLUSIVITY ---
+        let djModeActive = false;
+        let aiInControl = false;
+        let uploadedFiles = [];
+        let currentAudioSource = null;
+        let djInterval = null;
+
+        const tracks = [
+            { name: 'KICK', color: '#ff0080', colorRgb: '255,0,128', volume: 0.9, type: 'kick' },
+            { name: 'SNARE', color: '#00ff80', colorRgb: '0,255,128', volume: 0.7, type: 'snare' },
+            { name: 'HI-HAT', color: '#0080ff', colorRgb: '0,128,255', volume: 0.5, type: 'hihat' },
+            { name: 'OPEN HAT', color: '#ff8000', colorRgb: '255,128,0', volume: 0.4, type: 'openhat' },
+            { name: 'BASS', color: '#8000ff', colorRgb: '128,0,255', volume: 0.8, type: 'bass' },
+            { name: 'LEAD', color: '#ff0040', colorRgb: '255,0,64', volume: 0.6, type: 'lead' },
+            { name: 'PERC', color: '#40ff00', colorRgb: '64,255,0', volume: 0.5, type: 'perc' },
+            { name: 'FX', color: '#ff4000', colorRgb: '255,64,0', volume: 0.4, type: 'fx' }
+        ];
+
+        let patterns = Array.from({length: tracks.length}, () => Array(sequenceLength).fill(false));
+
+        // Sample Pack Categories
+        const presetCategories = {
+            prodigy: {
+                name: "🔥 PRODIGY PACK",
+                presets: {
+                    firestarter: { name: "Firestarter", pattern: [[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1],[1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],[1,0,0,1,0,0,1,0,1,0,0,1,0,0,1,0],[0,1,0,0,1,0,0,1,0,1,0,0,1,0,0,1],[1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0],[0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]] },
+                    breathe: { name: "Breathe", pattern: [[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],[0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0],[0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0],[0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],[0,0,1,0,1,0,1,0,0,0,1,0,1,0,1,0],[0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0],[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]] },
+                    voodoo: { name: "Voodoo People", pattern: [[1,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0],[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],[0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],[0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0],[1,0,1,0,1,0,0,1,1,0,1,0,1,0,0,1],[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]] }
+                }
+            },
+            dnb: {
+                name: "🥁 DRUM & BASS",
+                presets: {
+                    amen: { name: "Amen Break", pattern: [[1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0],[0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1],[1,0,1,1,0,1,0,1,1,0,1,1,0,1,0,1],[0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0],[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],[1,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0],[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1]] }
+                }
+            }
+        };
+
+        let currentCategory = 'prodigy';
+
+        // --- GEMINI API INTEGRATION ---
+        const apiKey = "";
+        
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            let retries = 0;
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            while (retries <= maxRetries) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (retries === maxRetries) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delays[retries]));
+                    retries++;
+                }
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        function showModal(title, text, showInput = false, onSubmit = null) {
+            document.getElementById('geminiModal').style.display = 'flex';
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalText').textContent = text;
+            
+            const inputEl = document.getElementById('modalInput');
+            const submitBtn = document.getElementById('modalSubmitBtn');
+            
+            if (showInput) {
+                inputEl.style.display = 'inline-block';
+                inputEl.value = '';
+                submitBtn.style.display = 'inline-block';
+                submitBtn.onclick = () => {
+                    if (inputEl.value.trim() !== '') {
+                        document.getElementById('geminiModal').style.display = 'none';
+                        if (onSubmit) onSubmit(inputEl.value.trim());
+                    }
+                };
+            } else {
+                inputEl.style.display = 'none';
+                submitBtn.style.display = 'none';
+            }
+        }
+
+        document.getElementById('modalCloseBtn').addEventListener('click', () => {
+            document.getElementById('geminiModal').style.display = 'none';
+        });
+
+        // --- GEMINI LLM FEATURES ---
+        
+        // ✨ 1. TEXT-TO-BEAT
+        async function generateBeatFromText(prompt) {
+            showAIStatus('✨ Gemini is generating a beat...', '#f1c40f');
+            const payloadText = `Create a drum machine pattern based on this vibe/description: "${prompt}". The sequence length must be exactly ${sequenceLength} steps. We have 8 tracks: Kick, Snare, Hi-hat, Open hat, Bass, Lead, Perc, FX. Output JSON with a "tempo" (60-200) and a "patterns" array containing 8 arrays of booleans (true for a hit, false for silence), each array having exactly ${sequenceLength} elements.`;
+            
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    tempo: { type: "INTEGER" },
+                    patterns: {
+                        type: "ARRAY",
+                        items: { type: "ARRAY", items: { type: "BOOLEAN" } }
+                    }
+                }
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: payloadText }] }],
+                systemInstruction: { parts: [{ text: "You are an expert music producer AI. Translate emotional/vibe prompts into accurate, playable drum sequencer patterns. Return valid JSON only." }] },
+                generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const result = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                
+                // Apply tempo
+                tempo = Math.max(60, Math.min(200, data.tempo || 140));
+                document.getElementById('tempoSlider').value = tempo;
+                document.getElementById('tempoDisplay').textContent = tempo;
+                updateSequenceInfo();
+
+                // Apply patterns
+                for(let i=0; i<8; i++) {
+                    if(data.patterns && data.patterns[i] && data.patterns[i].length === sequenceLength) {
+                        patterns[i] = data.patterns[i];
+                    }
+                }
+                updatePatternDisplay();
+                showAIStatus('✨ Text-to-Beat loaded successfully!', '#00ff80');
+            } catch(e) {
+                console.error(e);
+                showAIStatus('❌ Failed to generate beat.', '#e74c3c');
+            }
+        }
+
+        // ✨ 2. AI MIX ENGINEER
+        async function runMixEngineer() {
+            showAIStatus('✨ AI Mix Engineer is analyzing density...', '#00ff80');
+            
+            const hits = patterns.map(track => track.filter(Boolean).length);
+            const context = `Tempo: ${tempo} BPM. Hits per track -> Kick:${hits[0]}, Snare:${hits[1]}, Hihat:${hits[2]}, OpenHat:${hits[3]}, Bass:${hits[4]}, Lead:${hits[5]}, Perc:${hits[6]}, FX:${hits[7]}.`;
+            
+            const payloadText = `You are a professional audio mix engineer. Based on the following track density, provide optimal FX values to make this sound massive and balanced. ${context}`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    filterFreq: { type: "INTEGER", description: "100 to 20000 Hz. Sparse beats need heavy filtering, fast beats need bright top end." },
+                    distortion: { type: "INTEGER", description: "0 to 100. Apply more distortion if the beat is aggressive or heavy on bass/kicks." },
+                    reverb: { type: "INTEGER", description: "0 to 100. Spatial effect." },
+                    delay: { type: "INTEGER", description: "0 to 100. Echo effect." }
+                }
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: payloadText }] }],
+                systemInstruction: { parts: [{ text: "Analyze the drum hits and provide a creative mixdown. Output JSON only." }] },
+                generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const result = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                
+                // Apply mix values to UI
+                document.getElementById('filterFreq').value = Math.max(100, Math.min(20000, data.filterFreq || 20000));
+                document.getElementById('distortion').value = Math.max(0, Math.min(100, data.distortion || 0));
+                document.getElementById('reverb').value = Math.max(0, Math.min(100, data.reverb || 50));
+                document.getElementById('delay').value = Math.max(0, Math.min(100, data.delay || 0));
+                
+                // Trigger events to update audio nodes immediately
+                ['filterFreq', 'distortion', 'reverb', 'delay'].forEach(id => {
+                    document.getElementById(id).dispatchEvent(new Event('input'));
+                });
+
+                showAIStatus('✨ Mix Engineer optimized the FX!', '#00ff80');
+            } catch(e) {
+                console.error(e);
+                showAIStatus('❌ Mix analysis failed.', '#e74c3c');
+            }
+        }
+
+        // ✨ 3. ROAST MY BEAT
+        async function roastMyBeat() {
+            showAIStatus('✨ Gemini is listening to your beat...', '#ff4757');
+            const hits = patterns.map(track => track.filter(Boolean).length);
+            const context = `Sequence length: ${sequenceLength}, Tempo: ${tempo} BPM. Hit counts -> Kick:${hits[0]}, Snare:${hits[1]}, Hihat:${hits[2]}, OpenHat:${hits[3]}, Bass:${hits[4]}, Lead:${hits[5]}, Perc:${hits[6]}, FX:${hits[7]}.`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: `Roast my current drum pattern based on these exact statistics: ${context}` }] }],
+                systemInstruction: { parts: [{ text: "You are an arrogant, savage techno music producer from Berlin. Roast the user's drum beat based on the provided hit counts and tempo. Keep it to 2-3 sentences. Be extremely funny, ruthless, use heavy electronic music production slang, and mock their creative choices. Do not use JSON." }] }
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const result = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+                const roastText = result.candidates[0].content.parts[0].text;
+                
+                // Show the roast in the custom modal
+                showModal('🔥 ROAST MY BEAT 🔥', roastText);
+                showAIStatus('✨ Roast delivered!', '#ff4757');
+            } catch(e) {
+                console.error(e);
+                showAIStatus('❌ Failed to connect for roast.', '#e74c3c');
+            }
+        }
+
+        // --- AUDIO ENGINE ---
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                masterGain = audioContext.createGain();
+                filterNode = audioContext.createBiquadFilter();
+                distortionNode = audioContext.createWaveShaper();
+                reverbNode = audioContext.createConvolver();
+                delayNode = audioContext.createDelay();
+                
+                reverbGain = audioContext.createGain();
+                delayGain = audioContext.createGain();
+                feedbackGain = audioContext.createGain();
+
+                filterNode.type = 'lowpass';
+                filterNode.frequency.value = 20000;
+                filterNode.Q.value = 1;
+                
+                distortionNode.curve = makeDistortionCurve(0);
+                distortionNode.oversample = '4x';
+
+                delayNode.delayTime.value = 0.25; 
+                feedbackGain.gain.value = 0.5;
+
+                reverbGain.gain.value = document.getElementById('reverb').value / 100;
+                delayGain.gain.value = document.getElementById('delay').value / 100;
+
+                // Signal Flow
+                filterNode.connect(distortionNode);
+                distortionNode.connect(masterGain);
+
+                distortionNode.connect(reverbNode);
+                reverbNode.connect(reverbGain);
+                reverbGain.connect(masterGain);
+
+                distortionNode.connect(delayNode);
+                delayNode.connect(delayGain);
+                delayGain.connect(masterGain);
+
+                delayNode.connect(feedbackGain);
+                feedbackGain.connect(delayNode);
+                
+                createReverbImpulse(reverbNode);
+
+                masterGain.gain.value = 0.8;
+                masterGain.connect(audioContext.destination);
+                
+                exportDestination = audioContext.createMediaStreamDestination();
+                masterGain.connect(exportDestination);
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        function createReverbImpulse(convolverNode) {
+            const duration = 2.0;
+            const decay = 1.0;
+            const sampleRate = convolverNode.context.sampleRate;
+            const length = sampleRate * duration;
+            const impulse = convolverNode.context.createBuffer(2, length, sampleRate);
+            const impulseL = impulse.getChannelData(0);
+            const impulseR = impulse.getChannelData(1);
+
+            for (let i = 0; i < length; i++) {
+                let x = Math.pow(1 - i / length, decay);
+                impulseL[i] = (Math.random() * 2 - 1) * x * 0.5;
+                impulseR[i] = (Math.random() * 2 - 1) * x * 0.5;
+            }
+            convolverNode.buffer = impulse;
+        }
+
+        function makeDistortionCurve(amount) {
+            const samples = 44100;
+            const curve = new Float32Array(samples);
+            const deg = Math.PI / 180;
+            for (let i = 0; i < samples; i++) {
+                const x = (i * 2) / samples - 1;
+                curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+            }
+            return curve;
+        }
+
+        // --- SYNTH ENGINES ---
+        function createKick(when, volume) {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const f = audioContext.createBiquadFilter();
+            osc.frequency.setValueAtTime(60, when);
+            osc.frequency.exponentialRampToValueAtTime(0.1, when + 0.5);
+            f.type = 'lowpass';
+            f.frequency.setValueAtTime(200, when);
+            gain.gain.setValueAtTime(volume * 1.2, when);
+            gain.gain.exponentialRampToValueAtTime(0.001, when + 0.5);
+            osc.connect(f); f.connect(gain); gain.connect(filterNode);
+            osc.start(when); osc.stop(when + 0.5);
+        }
+
+        function createSnare(when, volume) {
+            const bufferSize = audioContext.sampleRate * 0.2;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) output[i] = (Math.random() * 2 - 1) * 0.4;
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(volume * 0.6, when);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, when + 0.2);
+            noise.connect(noiseGain); noiseGain.connect(filterNode);
+            noise.start(when);
+        }
+
+        function createHiHat(when, volume, open = false) {
+            const bufferSize = audioContext.sampleRate * (open ? 0.3 : 0.1);
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) output[i] = (Math.random() * 2 - 1) * 0.1;
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioContext.createGain();
+            const f = audioContext.createBiquadFilter();
+            f.type = 'highpass';
+            f.frequency.setValueAtTime(open ? 6000 : 10000, when);
+            gain.gain.setValueAtTime(volume, when);
+            gain.gain.exponentialRampToValueAtTime(0.001, when + (open ? 0.3 : 0.1));
+            noise.connect(f); f.connect(gain); gain.connect(filterNode);
+            noise.start(when);
+        }
+
+        function playSound(trackType, when, volume) {
+            switch(trackType) {
+                case 'kick': createKick(when, volume); break;
+                case 'snare': createSnare(when, volume); break;
+                case 'hihat': createHiHat(when, volume, false); break;
+                case 'openhat': createHiHat(when, volume, true); break;
+                // Simplified for single file length limits - bass/lead/fx omitted in this specific block, fallback to kick/snare
+                default: createKick(when, volume * 0.5); break; 
+            }
+        }
+
+        // --- SEQUENCER LOGIC ---
+        function nextNote() {
+            const secondsPerBeat = 60.0 / tempo;
+            nextStepTime += 0.25 * secondsPerBeat;
+            currentStep++;
+            if (currentStep >= sequenceLength) currentStep = 0;
+        }
+
+        function scheduleNote(stepNumber, time) {
+            setTimeout(() => { updateStepIndicators(stepNumber); }, (time - audioContext.currentTime) * 1000);
+            tracks.forEach((track, trackIndex) => {
+                if (patterns[trackIndex][stepNumber]) {
+                    playSound(track.type, time, track.volume);
+                }
+            });
+        }
+
+        function scheduler() {
+            while (nextStepTime < audioContext.currentTime + scheduleAheadTime) {
+                scheduleNote(currentStep, nextStepTime);
+                nextNote();
+            }
+            if (isPlaying) setTimeout(scheduler, lookAhead);
+        }
+
+        function startSequencer() {
+            initAudio();
+            isPlaying = true;
+            currentStep = 0;
+            nextStepTime = audioContext.currentTime;
+            document.getElementById('playBtn').innerHTML = '⏸ PAUSE';
+            document.getElementById('playBtn').classList.add('playing');
+            scheduler();
+        }
+
+        function stopSequencer() {
+            isPlaying = false;
+            document.getElementById('playBtn').innerHTML = '▶ PLAY';
+            document.getElementById('playBtn').classList.remove('playing');
+            document.querySelectorAll('.step-button').forEach(btn => btn.classList.remove('playing'));
+            currentStep = 0;
+            
+            // Stop uploaded track if playing
+            if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e){}
+            }
+
+            // If recording the DJ Set, finish it
+            if (exportRecorder && exportRecorder.state === 'recording') {
+                exportRecorder.stop();
+                showAIStatus('✅ Recording finalized & downloaded.', '#00ff80');
+            }
+
+            resetDjOverlay();
+        }
+
+        // --- UI GENERATION & UPDATES ---
+        function updateSequenceLength(newLength) {
+            const oldLength = sequenceLength;
+            sequenceLength = parseInt(newLength);
+            patterns = patterns.map(track => {
+                if (sequenceLength > oldLength) return [...track, ...Array(sequenceLength - oldLength).fill(false)];
+                else return track.slice(0, sequenceLength);
+            });
+            generateUI();
+            updatePatternDisplay();
+            updateSequenceInfo();
+        }
+
+        function updateSequenceInfo() {
+            document.getElementById('sequenceInfo').textContent = `${sequenceLength}-Step Breakbeat Mode @ ${tempo} BPM`;
+        }
+
+        function generateUI() {
+            const stepNumbers = document.getElementById('stepNumbers');
+            const gridCols = `100px 60px repeat(${sequenceLength}, 1fr)`;
+            stepNumbers.style.gridTemplateColumns = gridCols;
+            stepNumbers.innerHTML = `<div></div><div>VOL</div>${Array.from({length: sequenceLength}, (_, i) => `<div class="step-number">${i + 1}</div>`).join('')}`;
+            
+            document.getElementById('tracks').innerHTML = tracks.map((track, trackIndex) => `
+                <div class="track-row" style="grid-template-columns: ${gridCols}">
+                    <div class="track-label" style="color: ${track.color}">${track.name}</div>
+                    <div class="volume-control"><input type="range" min="0" max="100" value="${Math.round(track.volume * 100)}" class="volume-slider" data-track="${trackIndex}"></div>
+                    ${Array.from({length: sequenceLength}, (_, stepIndex) => `
+                        <button class="step-button ${((stepIndex % 4) + 1 === 1) ? 'beat-1' : ''}" data-track="${trackIndex}" data-step="${stepIndex}"
+                                style="--track-color: ${track.color};"></button>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        function generateCategoryTabs() {
+            document.getElementById('categoryTabs').innerHTML = Object.keys(presetCategories).map(cat => `
+                <button class="category-tab ${cat === currentCategory ? 'active' : ''}" data-category="${cat}">${presetCategories[cat].name}</button>
+            `).join('');
+        }
+
+        function generatePresetGrid() {
+            const categoryData = presetCategories[currentCategory];
+            if (!categoryData) return;
+            document.getElementById('presetGrid').innerHTML = Object.keys(categoryData.presets).map(presetKey => `
+                <button class="preset-btn" data-preset="${presetKey}" data-category="${currentCategory}">
+                    ${categoryData.presets[presetKey].name}
+                </button>
+            `).join('');
+        }
+
+        function updateStepIndicators(step) {
+            document.querySelectorAll('.step-button').forEach(btn => btn.classList.remove('playing'));
+            document.querySelectorAll(`[data-step="${step}"]`).forEach(btn => btn.classList.add('playing'));
+        }
+
+        function updatePatternDisplay() {
+            document.querySelectorAll('.step-button').forEach(btn => {
+                const track = parseInt(btn.dataset.track);
+                const step = parseInt(btn.dataset.step);
+                if (patterns[track] && patterns[track][step] !== undefined) {
+                    btn.classList.toggle('active', patterns[track][step]);
+                }
+            });
+        }
+
+        function loadPreset(presetKey, categoryKey = currentCategory) {
+            const categoryData = presetCategories[categoryKey];
+            if (categoryData && categoryData.presets[presetKey]) {
+                const presetPattern = categoryData.presets[presetKey].pattern;
+                patterns = presetPattern.map(track => {
+                    if (sequenceLength <= track.length) return track.slice(0, sequenceLength);
+                    else {
+                        const extended = [...track];
+                        while (extended.length < sequenceLength) {
+                            const toAdd = Math.min(sequenceLength - extended.length, track.length);
+                            extended.push(...track.slice(0, toAdd));
+                        }
+                        return extended;
+                    }
+                });
+                updatePatternDisplay();
+            }
+        }
+
+        function showAIStatus(message, color) {
+            const statusEl = document.getElementById('aiStatus');
+            statusEl.textContent = message;
+            statusEl.style.color = color;
+            statusEl.style.opacity = '1';
+            setTimeout(() => { statusEl.style.opacity = '0'; }, 3000);
+        }
+
+        // --- 🎧 AI DJ FESTIVAL SET WITH UPLOADED TRACKS & EXCLUSIVITY 🎧 ---
+        
+        // 1. File Upload Logic
+        document.getElementById('djAudioUpload').addEventListener('change', (e) => {
+            uploadedFiles = Array.from(e.target.files);
+            document.getElementById('uploadStatus').textContent = `${uploadedFiles.length} Tracks Loaded! Ready for DJ Mix.`;
+            showAIStatus(`Loaded ${uploadedFiles.length} MP3s!`, '#00ff80');
+        });
+
+        async function playUploadedTrack(file) {
+            if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e){}
+            }
+            const arrayBuffer = await file.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            
+            const trackGain = audioContext.createGain();
+            trackGain.gain.value = 1.0;
+            
+            source.connect(trackGain);
+            trackGain.connect(filterNode); // Route MP3 through our global FX (Filter, Dist, Reverb)!
+            
+            source.start();
+            currentAudioSource = source;
+            return source;
+        }
+
+        // 2. The Exclusivity (Takeover) Logic
+        function userTakeoverInteraction(e) {
+            if (djModeActive && aiInControl) {
+                // Ignore if they click the takeover or AI button itself
+                if (e.target.id === 'aiFestivalBtn' || e.target.id === 'takeoverBtn') return;
+                
+                // If they touch a slider or a drum pad...
+                if (e.target.tagName === 'INPUT' || e.target.classList.contains('step-button')) {
+                    triggerUserTakeover();
+                }
+            }
+        }
+
+        function triggerUserTakeover() {
+            aiInControl = false;
+            if (djInterval) clearInterval(djInterval);
+            
+            const overlay = document.getElementById('aiDjOverlay');
+            overlay.classList.add('takeover');
+            document.getElementById('aiDjTitle').textContent = "🚨 USER IN CONTROL 🚨";
+            document.getElementById('aiActionInfo').textContent = "AI locked out. Finish the mix manually!";
+            
+            showAIStatus('You wrestled control from the AI!', '#e74c3c');
+        }
+
+        function resetDjOverlay() {
+            djModeActive = false;
+            aiInControl = false;
+            if (djInterval) clearInterval(djInterval);
+            document.getElementById('aiDjOverlay').style.display = 'none';
+            document.getElementById('aiDjOverlay').classList.remove('takeover');
+            document.getElementById('aiFestivalBtn').innerHTML = '🎧 START AI DJ FESTIVAL SET & RECORD 🎧';
+            document.getElementById('aiFestivalBtn').classList.remove('recording');
+        }
+
+        // 3. The AI Generation & DJ Set Logic
+        async function startAiDjFestival() {
+            if (djModeActive) return;
+            initAudio();
+            
+            djModeActive = true;
+            aiInControl = true;
+
+            const btn = document.getElementById('aiFestivalBtn');
+            btn.innerHTML = '🚨 AI DJ RECORDING LIVE SET...';
+            btn.classList.add('recording');
+            
+            document.getElementById('aiDjOverlay').style.display = 'flex';
+            document.getElementById('aiDjTitle').textContent = "🎧 AI DJ IN CONTROL 🎧";
+            document.getElementById('aiActionInfo').textContent = "Analyzing tracks and building setlist...";
+
+            // Determine if we are mixing Uploaded Tracks OR Internal Presets
+            let isUsingUploads = uploadedFiles.length > 0;
+            let payloadText = "";
+
+            if (isUsingUploads) {
+                const filenames = uploadedFiles.map(f => f.name).join(", ");
+                payloadText = `I have uploaded these MP3 tracks: [${filenames}]. Order them into a mini DJ mix based on inferred genre/BPM. Give each track a play duration (in seconds, e.g. 15), and starting FX values for Filter (100-20000) and Distortion (0-100).`;
+            } else {
+                payloadText = "I have 4 internal drum machine presets: 'firestarter', 'breathe', 'voodoo', 'amen'. Create a sequence of 4 tracks mixing these presets. Give each a duration (seconds) and FX automations.";
+            }
+
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    setlist: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                trackNameOrPreset: { type: "STRING" },
+                                durationSeconds: { type: "INTEGER" },
+                                fxFilter: { type: "INTEGER", description: "100 to 20000" },
+                                fxDistortion: { type: "INTEGER", description: "0 to 100" }
+                            }
+                        }
+                    }
+                }
+            };
+
+            const payload = {
+                contents: [{ parts: [{ text: payloadText }] }],
+                systemInstruction: { parts: [{ text: "You are an AI DJ. Output strictly valid JSON matching the schema." }] },
+                generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+            };
+
+            let plan;
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const result = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+                plan = JSON.parse(result.candidates[0].content.parts[0].text);
+            } catch(e) {
+                console.error("AI Mix Error:", e);
+                triggerUserTakeover();
+                document.getElementById('aiActionInfo').textContent = "AI Brain Fried. You must mix!";
+                return;
+            }
+
+            // Start High Quality WebM Recording
+            try {
+                exportRecorder = new MediaRecorder(exportDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
+            } catch(e) {
+                exportRecorder = new MediaRecorder(exportDestination.stream);
+            }
+            
+            recordedChunks = [];
+            exportRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+            exportRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `AI_DJ_Festival_Master_${Date.now()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+            
+            exportRecorder.start();
+            if (!isPlaying) startSequencer();
+
+            // Execute the AI Setlist
+            let currentTrackIndex = 0;
+            
+            const executeNextTrack = async () => {
+                if (!djModeActive) return; // User stopped the sequencer
+                
+                if (currentTrackIndex >= plan.setlist.length) {
+                    if (aiInControl) {
+                        document.getElementById('aiActionInfo').textContent = "Set Finished! Thanks for raving.";
+                        setTimeout(stopSequencer, 3000);
+                    }
+                    return;
+                }
+
+                const track = plan.setlist[currentTrackIndex];
+                
+                // If AI is still in control, apply its track selection and FX
+                if (aiInControl) {
+                    document.getElementById('aiTrackInfo').textContent = `PLAYING: ${track.trackNameOrPreset}`;
+                    document.getElementById('aiActionInfo').textContent = `Tweaking FX: Filter ${track.fxFilter}Hz...`;
+                    
+                    if (isUsingUploads) {
+                        // Play uploaded MP3
+                        const file = uploadedFiles.find(f => f.name === track.trackNameOrPreset) || uploadedFiles[0];
+                        if (file) await playUploadedTrack(file);
+                        
+                        // Set sequencer volume to 0 so we only hear the MP3 and the FX
+                        tracks.forEach(t => t.volume = 0.0); 
+                    } else {
+                        // Play internal preset
+                        loadPreset(track.trackNameOrPreset, 'prodigy'); // simplified category search
+                    }
+
+                    // Apply AI FX
+                    document.getElementById('filterFreq').value = track.fxFilter;
+                    document.getElementById('distortion').value = track.fxDistortion;
+                    document.getElementById('filterFreq').dispatchEvent(new Event('input'));
+                    document.getElementById('distortion').dispatchEvent(new Event('input'));
+
+                    // AI randomly sweeps filter during the track
+                    let ticks = 0;
+                    djInterval = setInterval(() => {
+                        if (!aiInControl) { clearInterval(djInterval); return; }
+                        ticks++;
+                        let newFilter = Math.max(100, Math.min(20000, track.fxFilter + (Math.sin(ticks * 0.1) * 5000)));
+                        document.getElementById('filterFreq').value = newFilter;
+                        if (filterNode) filterNode.frequency.value = newFilter;
+                    }, 500);
+                }
+
+                // Wait for the track duration, then advance
+                setTimeout(() => {
+                    if (djInterval) clearInterval(djInterval);
+                    currentTrackIndex++;
+                    executeNextTrack();
+                }, track.durationSeconds * 1000);
+            };
+
+            executeNextTrack();
+        }
+
+        function setupEventListeners() {
+            // Takeover Listeners
+            document.addEventListener('mousedown', userTakeoverInteraction);
+            document.addEventListener('touchstart', userTakeoverInteraction);
+            
+            // Grid clicks
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('step-button')) {
+                    initAudio();
+                    const track = parseInt(e.target.dataset.track);
+                    const step = parseInt(e.target.dataset.step);
+                    patterns[track][step] = !patterns[track][step];
+                    e.target.classList.toggle('active', patterns[track][step]);
+                    playSound(tracks[track].type, audioContext.currentTime, tracks[track].volume);
+                }
+                
+                if (e.target.classList.contains('preset-btn')) {
+                    loadPreset(e.target.dataset.preset, e.target.dataset.category || currentCategory);
+                }
+                if (e.target.classList.contains('category-tab')) {
+                    currentCategory = e.target.dataset.category;
+                    document.querySelectorAll('.category-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.category === currentCategory));
+                    generatePresetGrid();
+                }
+            });
+
+            // Transport
+            document.getElementById('playBtn').addEventListener('click', () => { if (!isPlaying) startSequencer(); else stopSequencer(); });
+            document.getElementById('stopBtn').addEventListener('click', stopSequencer);
+            document.getElementById('clearBtn').addEventListener('click', () => { patterns = Array.from({length: tracks.length}, () => Array(sequenceLength).fill(false)); updatePatternDisplay(); });
+
+            // Settings
+            document.getElementById('sequenceLengthSelect').addEventListener('change', (e) => updateSequenceLength(e.target.value));
+            document.getElementById('tempoSlider').addEventListener('input', (e) => { tempo = parseInt(e.target.value); document.getElementById('tempoDisplay').textContent = tempo; updateSequenceInfo(); });
+            document.getElementById('masterVolume').addEventListener('input', (e) => { if (masterGain) masterGain.gain.value = e.target.value / 100; });
+            
+            // FX
+            document.getElementById('filterFreq').addEventListener('input', (e) => { if (filterNode) filterNode.frequency.value = e.target.value; });
+            document.getElementById('distortion').addEventListener('input', (e) => { if (distortionNode) distortionNode.curve = makeDistortionCurve(e.target.value / 10); });
+            document.getElementById('reverb').addEventListener('input', (e) => { if (reverbGain) reverbGain.gain.value = e.target.value / 100; });
+            document.getElementById('delay').addEventListener('input', (e) => { if (delayGain) delayGain.gain.value = e.target.value / 100; });
+            
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('volume-slider')) {
+                    const trackIndex = parseInt(e.target.dataset.track);
+                    tracks[trackIndex].volume = e.target.value / 100;
+                }
+            });
+
+            // AI Buttons
+            document.getElementById('aiFestivalBtn').addEventListener('click', startAiDjFestival);
+            
+            document.getElementById('geminiPromptBeat').addEventListener('click', () => {
+                showModal('✨ TEXT-TO-BEAT ✨', 'Opisi ritam koji želiš (npr. "aggressive dark techno with heavy bass" ili "fast liquid drum and bass"):', true, generateBeatFromText);
+            });
+            
+            document.getElementById('geminiMixEngineer').addEventListener('click', runMixEngineer);
+            document.getElementById('geminiRoastBeat').addEventListener('click', roastMyBeat);
+
+            // Manual Export
+            document.getElementById('exportMp3Btn').addEventListener('click', () => {
+                if(!audioContext) initAudio();
+                if(exportRecorder && exportRecorder.state==='recording') {
+                    exportRecorder.stop();
+                    document.getElementById('exportMp3Btn').textContent = '🎵 RECORD/EXPORT AS WEBM';
+                    document.getElementById('exportMp3Btn').style.background = '#f39c12';
+                } else {
+                    try { exportRecorder = new MediaRecorder(exportDestination.stream, { mimeType: 'audio/webm;codecs=opus' }); } 
+                    catch(e) { exportRecorder = new MediaRecorder(exportDestination.stream); }
+                    
+                    recordedChunks = [];
+                    exportRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+                    exportRecorder.onstop = () => {
+                        const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'audio/webm' }));
+                        const a = document.createElement('a'); a.href = url; a.download = `Manual_Export_${Date.now()}.webm`;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                    };
+                    exportRecorder.start();
+                    document.getElementById('exportMp3Btn').textContent = '⏹ STOP RECORDING & DOWNLOAD';
+                    document.getElementById('exportMp3Btn').style.background = '#e74c3c';
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            generateUI();
+            generateCategoryTabs();
+            generatePresetGrid();
+            setupEventListeners();
+            updatePatternDisplay();
+            updateSequenceInfo();
+            loadPreset('firestarter', 'prodigy');
+        });
+    </script>
+</body>
+</html>
